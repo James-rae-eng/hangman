@@ -6,9 +6,11 @@ class Computer
     end
 
     def play
-        if @word.length <= 4 || @word.length >= 13
-            @word = (File.readlines("google-10000-english-no-swears.txt").sample).split("")
+        word = ""
+        until word.length > 4 && word.length < 13
+            word = (File.readlines("google-10000-english-no-swears.txt").sample)
         end
+        @word = word.split("")
         print @word.join
 
         (@word.length - 1).times {@empty_word.push("_")}
@@ -19,13 +21,13 @@ end
 
 class User
     def initialize
-        @number_of_guesses = 6
+        @number_of_guesses = 0
         @running_word = nil
         @word = nil
     end
 
     def guess
-        if @number_of_guesses >=1 
+        if @number_of_guesses >= 1 
             puts "\nPlease type a character to guess. Type '#s' to save current game."
             while guess = gets.chomp 
                 case 
@@ -97,7 +99,8 @@ class User
         end
     end
 
-    def play(word, empty_word)
+    def play(word, empty_word, number_of_guesses) 
+        @number_of_guesses = number_of_guesses
         @running_word = empty_word
         @word = word
         guess()
@@ -137,25 +140,39 @@ You'll have 6 guesses to get the word (1 letter at a time).\n"
         #retrieve the file with that name 
         #read lines of the save and store in objects
         #pass the objects to start the user playing
+        puts "Please type the number of the save file you wish to load"
+        save_num = gets.chomp.to_i
+        save_file = "saves/#{list_of_saves[save_num-1][3..-1]}.txt"
+
+        number_of_guesses = IO.readlines(save_file)[0].to_i
+        running_word_unformat = IO.readlines(save_file)[1]
+        word_unformat = IO.readlines(save_file)[2]
+
+        running_word = running_word_unformat[0...-1].split("")
+        word = word_unformat[0...-1].split("")
+
+        puts "The partial word is: #{running_word.join(" ")}"
+        @user.play(word, running_word, number_of_guesses)
+    end
+
+    def new_game
+        puts "New game, Press Enter to continue"
+        STDIN.getc
+        @computer.play
+        @user.play(@computer.word, @computer.empty_word, 6)
     end
 
     def start
         puts "Would you like to load a previous game from a save file? Enter y / n"
-        while choice = gets.chomp.to_s.downcase
-            case 
-            when choice == "y"
-                load_save()
-                break 
-            else 
-                puts "Carrying on with a new game"
-                break
-            end
-        end    
-
-        puts "Press Enter to continue"
-        STDIN.getc
-        @computer.play
-        @user.play(@computer.word, @computer.empty_word)
+        choice = gets.chomp.to_s.downcase
+        if choice == "y" && Dir["saves/*.txt"].empty?
+            puts "No save files found"
+            new_game()
+        elsif choice == "y" && !Dir["saves/*.txt"].empty?
+            load_save()
+        else 
+            new_game()   
+        end
         replay_game()
     end
 end  
